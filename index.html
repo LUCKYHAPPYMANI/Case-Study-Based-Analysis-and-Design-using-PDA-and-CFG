@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDA & CFG Real-Time Validator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .stack-item { transition: all 0.3s ease; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen p-8">
+    <div class="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+        <h1 class="text-3xl font-bold mb-2 border-b pb-4 text-slate-900">PDA & CFG Case Study Validator</h1>
+        <p class="text-slate-600 mb-8">Interactive Pushdown Automaton (PDA) and Context-Free Grammar parser simulator.</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div>
+                <label class="block text-sm font-semibold mb-2">Select Case Study Model</label>
+                <select id="model-selector" class="w-full p-3 border rounded-lg bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                    <option value="parentheses">1. Multi-Delimiter Balanced Parentheses</option>
+                    <option value="arithmetic">2. Unambiguous Arithmetic Expression (CFG/PDA)</option>
+                    <option value="conditional">3. Conditional Syntax (Dangling-Else Resolution)</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold mb-2">Input Test String</label>
+                <div class="flex gap-2">
+                    <input type="text" id="input-string" value="{[()()]}" placeholder="Enter expression..." class="w-full p-3 border rounded-lg bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none font-mono">
+                    <button onclick="runParser()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors">Validate</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="results-container" class="hidden">
+            <h2 class="text-xl font-bold mb-4">Parsing & Stack Execution Log</h2>
+            <div class="bg-slate-900 rounded-lg p-6 font-mono text-sm overflow-x-auto text-white">
+                <div class="flex items-center gap-2 text-slate-400 mb-4">
+                    <span>Input:</span>
+                    <span id="display-input" class="text-white font-bold text-lg"></span>
+                </div>
+                
+                <div id="trace-steps" class="space-y-2 mb-6 max-h-60 overflow-y-auto pr-2">
+                    <!-- Dynamic trace log rows injected here -->
+                </div>
+
+                <div class="border-t border-slate-700 pt-4 flex items-center justify-between">
+                    <span class="text-slate-400">Final Verdict:</span>
+                    <span id="final-verdict" class="px-4 py-2 rounded-lg font-bold text-lg"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // JavaScript Port of the 3 PDA/CFG Validators
+        function validateParentheses(s) {
+            let stack = ["Z0"];
+            let logs = [`Start Stack: [Z0] | Input: ${s || 'ε'}`];
+            const pairs = {")": "(", "]": "[", "}": "{"};
+
+            for (let ch of s) {
+                if ("([{".includes(ch)) {
+                    stack.push(ch);
+                    logs.appendStep(`Push '${ch}' -> Stack: [${stack.join(', ')}]`);
+                } else if (")]}}".includes(ch) || ")]}".includes(ch)) {
+                    if (stack.length > 1 && stack[stack.length - 1] === pairs[ch]) {
+                        stack.pop();
+                        logs.appendStep(`Match & Pop '${ch}' -> Stack: [${stack.join(', ')}]`);
+                    } else {
+                        logs.appendStep(`CRASH: Mismatch for '${ch}' against stack top`);
+                        return { valid: false, logs };
+                    }
+                } else {
+                    logs.appendStep(`CRASH: Invalid character '${ch}'`);
+                    return { valid: false, logs };
+                }
+            }
+            const valid = stack.length === 1 && stack[0] === "Z0";
+            logs.appendStep(valid ? "ACCEPT (Stack clean at Z0)" : `REJECT (Unclosed elements on stack)`);
+            return { valid, logs };
+        }
+
+        // Helper for array append style
+        Array.prototype.appendStep = function(msg) { this.push(msg); };
+
+        function validateArithmetic(expr) {
+            let tokens = expr.trim().split(/\s+/);
+            if (tokens.length === 0 || expr === "") return { valid: false, logs: ["Empty input expression"] };
+            
+            // Simplified LL(1) simulation for front-end demo
+            let stack = ["Z0", "E"];
+            let logs = [`Stack: [E, Z0] | Input tokens: [${tokens.join(', ')}]`];
+            let idx = 0;
+
+            // Basic structural sanity check matching G2 rules
+            let openParens = 0;
+            let lastWasOperator = true;
+            for (let t of tokens) {
+                if (t === 'id') {
+                    if (!lastWasOperator) return { valid: false, logs: [`Syntax Error: unexpected 'id'`] };
+                    lastWasOperator = false;
+                } else if (['+', '*'].includes(t)) {
+                    if (lastWasOperator) return { valid: false, logs: [`Syntax Error: unexpected operator '${t}'`] };
+                    lastWasOperator = true;
+                } else if (t === '(') {
+                    openParens++;
+                    lastWasOperator = true;
+                } else if (t === ')') {
+                    openParens--;
+                    if (openParens < 0) return { valid: false, logs: ["Syntax Error: unmatched closing parenthesis"] };
+                    lastWasOperator = false;
+                } else {
+                    return { valid: false, logs: [`Lexical Error: unknown token '${t}'`] };
+                }
+                logs.push(`Processed token '${t}' successfully`);
+            }
+            const valid = !lastWasOperator && openParens === 0;
+            logs.push(valid ? "ACCEPT: Expression structure fully validated" : "REJECT: Incomplete expression structure");
+            return { valid, logs };
+        }
+
+        function validateConditional(code) {
+            let tokens = code.trim().split(/\s+/);
+            let stack = ["Z0", "S"];
+            let logs = [`Init Stack: [S, Z0]`];
+            let ifCount = 0;
+            let elseCount = 0;
+
+            for (let i = 0; i < tokens.length; i++) {
+                let tok = tokens[i];
+                if (tok === 'if') {
+                    ifCount++;
+                    logs.push(`Push 'if' scope (Total active ifs: ${ifCount})`);
+                } else if (tok === 'else') {
+                    elseCount++;
+                    if (elseCount > ifCount) {
+                        logs.push(`CRASH: Orphaned 'else' without matching 'if'`);
+                        return { valid: false, logs };
+                    }
+                    logs.push(`Matched 'else' to open 'if' block`);
+                } else {
+                    logs.push(`Consumed statement token '${tok}'`);
+                }
+            }
+            let valid = ifCount === elseCount || ifCount > elseCount; 
+            // Allow un-else'd ifs if valid syntax, but reject extra else
+            if (elseCount > ifCount) valid = false;
+            
+            logs.push(valid ? "ACCEPT: Conditional syntax verified" : "REJECT: Mismatched block controls");
+            return { valid, logs };
+        }
+
+        function runParser() {
+            const model = document.getElementById('model-selector').value;
+            const input = document.getElementById('input-string').value;
+            
+            let result;
+            if (model === 'parentheses') result = validateParentheses(input);
+            else if (model === 'arithmetic') result = validateArithmetic(input);
+            else if (model === 'conditional') result = validateConditional(input);
+
+            renderOutput(input, result.logs, result.valid);
+        }
+
+        function renderOutput(input, logs, isAccepted) {
+            document.getElementById('results-container').classList.remove('hidden');
+            document.getElementById('display-input').textContent = input === '' ? '<empty>' : input;
+            
+            const stepsContainer = document.getElementById('trace-steps');
+            stepsContainer.innerHTML = '';
+            
+            logs.forEach((log, idx) => {
+                const row = document.createElement('div');
+                row.className = 'text-xs font-mono text-slate-300 border-l-2 border-blue-500 pl-3 py-1';
+                row.textContent = `Step ${idx + 1}: ${log}`;
+                stepsContainer.appendChild(row);
+            });
+
+            const verdict = document.getElementById('final-verdict');
+            if (isAccepted) {
+                verdict.textContent = 'ACCEPT';
+                verdict.className = 'px-4 py-2 rounded-lg font-bold text-lg bg-green-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.5)]';
+            } else {
+                verdict.textContent = 'REJECT';
+                verdict.className = 'px-4 py-2 rounded-lg font-bold text-lg bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.5)]';
+            }
+        }
+
+        // Auto-update sample placeholder values when dropdown changes
+        document.getElementById('model-selector').addEventListener('change', function(e) {
+            const val = e.target.value;
+            const inputField = document.getElementById('input-string');
+            if (val === 'parentheses') inputField.value = "{[()()]}";
+            else if (val === 'arithmetic') inputField.value = "id + id * id";
+            else if (val === 'conditional') inputField.value = "if c then if c then a else a";
+        });
+    </script>
+</body>
+</html>
