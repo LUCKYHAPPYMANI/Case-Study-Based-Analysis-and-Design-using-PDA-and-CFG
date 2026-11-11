@@ -1,0 +1,24 @@
+digraph ArithmeticExpressionPDA {
+    rankdir=LR;
+    fontname="Helvetica,Arial,sans-serif";
+    node [fontname="Helvetica,Arial,sans-serif", fontsize=11, shape=circle, style="filled", fillcolor="#f8fafc", color="#334155", penwidth=1.5];
+    edge [fontname="Helvetica,Arial,sans-serif", fontsize=10, color="#475569", penwidth=1.2];
+
+    label="Case Study 2: Unambiguous Arithmetic Expression LL(1) PDA (Grammar G2)";
+    labelloc="t";
+    fontsize=14;
+
+    start [shape=none, label="", width=0, height=0, style=invis];
+    q_init [label="q_init"];
+    q_loop [label="q_parse\n(LL(1) Loop)"];
+    qf [label="qf\n(Accept)", shape=doublecircle, fillcolor="#dcfce7", color="#166534"];
+    q_err [label="q_err\n(Syntax Error)", fillcolor="#fee2e2", color="#991b1b"];
+
+    start -> q_init;
+    q_init -> q_loop [label="ε, Z0 / E Z0"];
+
+    q_loop -> q_loop [label="Non-Terminal Expansions (Top -> Push):\n[tok ∈ {id, (}]  ε, E / T E'\n[tok = '+']  ε, E' / + T E'\n[tok ∈ {), $}]  ε, E' / ε\n[tok ∈ {id, (}]  ε, T / F T'\n[tok = '*']  ε, T' / * F T'\n[tok ∈ {+, ), $}]  ε, T' / ε\n[tok = 'id']  ε, F / id\n[tok = '(']  ε, F / ( E )\n\nTerminal Matching (Top == tok):\nid, id / ε  |  +, + / ε  |  *, * / ε\n(, ( / ε  |  ), ) / ε"];
+
+    q_loop -> qf [label="$, Z0 / Z0\n(Input consumed)"];
+    q_loop -> q_err [label="Unexpected token /\nTerminal mismatch /\nUnconsumed tokens", color="#dc2626", fontcolor="#991b1b"];
+}

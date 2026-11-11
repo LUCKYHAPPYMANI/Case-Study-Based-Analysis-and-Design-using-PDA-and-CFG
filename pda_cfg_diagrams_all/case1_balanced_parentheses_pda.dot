@@ -1,0 +1,23 @@
+digraph BalancedParenthesesPDA {
+    rankdir=LR;
+    fontname="Helvetica,Arial,sans-serif";
+    node [fontname="Helvetica,Arial,sans-serif", fontsize=11, shape=circle, style="filled", fillcolor="#f8fafc", color="#334155", penwidth=1.5];
+    edge [fontname="Helvetica,Arial,sans-serif", fontsize=10, color="#475569", penwidth=1.2];
+    
+    label="Case Study 1: Multi-Delimiter Balanced Parentheses DPDA";
+    labelloc="t";
+    fontsize=14;
+
+    start [shape=none, label="", width=0, height=0, style=invis];
+    q0 [label="q0\n(Active Stack)"];
+    qf [label="qf\n(Accept)", shape=doublecircle, fillcolor="#dcfce7", color="#166534"];
+    q_err [label="q_crash\n(Reject)", fillcolor="#fee2e2", color="#991b1b"];
+
+    start -> q0 [label="Start (Stack: Z0)"];
+
+    q0 -> q0 [label="PUSH Opening Delimiters:\n'(', γ / (γ\n'[', γ / [γ\n'{', γ / {γ\n\nPOP Matching Delimiters:\n')', '(' / ε\n']', '[' / ε\n'}', '{' / ε"];
+    
+    q0 -> qf [label="ε, Z0 / Z0\n(Input exhausted, Stack clean)"];
+    
+    q0 -> q_err [label="Mismatch: ')', '[' or '{'\nMismatch: ']', '(' or '{'\nMismatch: '}', '(' or '['\nPremature close on Z0\nUnclosed stack at EOF", color="#dc2626", fontcolor="#991b1b"];
+}

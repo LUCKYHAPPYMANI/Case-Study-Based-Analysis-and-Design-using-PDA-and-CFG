@@ -1,0 +1,24 @@
+digraph ConditionalSyntaxPDA {
+    rankdir=LR;
+    fontname="Helvetica,Arial,sans-serif";
+    node [fontname="Helvetica,Arial,sans-serif", fontsize=11, shape=circle, style="filled", fillcolor="#f8fafc", color="#334155", penwidth=1.5];
+    edge [fontname="Helvetica,Arial,sans-serif", fontsize=10, color="#475569", penwidth=1.2];
+
+    label="Case Study 3: Conditional Syntax PDA (Dangling-Else Resolution - G3)";
+    labelloc="t";
+    fontsize=14;
+
+    start [shape=none, label="", width=0, height=0, style=invis];
+    q_init [label="q_init"];
+    q_loop [label="q_parse\n(Scope Manager)"];
+    qf [label="qf\n(Accept)", shape=doublecircle, fillcolor="#dcfce7", color="#166534"];
+    q_err [label="q_crash\n(Reject)", fillcolor="#fee2e2", color="#991b1b"];
+
+    start -> q_init;
+    q_init -> q_loop [label="ε, Z0 / S Z0"];
+
+    q_loop -> q_loop [label="Grammar Productions (Top -> Push):\n[tok = 'if']  ε, S / if c then S ELSE_OPT\n[tok = 'a']  ε, S / a\n\nGreedy Dangling-Else Resolution:\n[tok = 'else']  ε, ELSE_OPT / else S  (Bind closest 'if')\n[tok ≠ 'else']  ε, ELSE_OPT / ε  (Close unmatched 'if')\n\nTerminal Consumption (Top == tok):\nif, if / ε  |  c, c / ε  |  then, then / ε\nelse, else / ε  |  a, a / ε"];
+
+    q_loop -> qf [label="$, Z0 / Z0\n(All scopes resolved)"];
+    q_loop -> q_err [label="Orphaned 'else' /\nInvalid statement start /\nExpected token mismatch", color="#dc2626", fontcolor="#991b1b"];
+}
